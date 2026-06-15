@@ -1,0 +1,7 @@
+{
+  "installCommand": "cd ../.. && pnpm install",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist/public",
+  "rewrites": [{ "source": "/(.*)", "destination": "/" }],
+  "framework": null
+}
