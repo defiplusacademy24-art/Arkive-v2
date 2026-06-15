@@ -73,7 +73,6 @@ export function DashboardPage() {
   const status = summary?.status ?? "active";
   const isAlert = status !== "active";
   const allActivity = activity ?? [];
-  const recent = showAllActivity ? allActivity : allActivity.slice(0, 4);
   const wishes = (assets && assets.length > 0)
     ? assets.slice(0, 4).map((a) => ({
         icon: DollarSign,
@@ -368,14 +367,39 @@ export function DashboardPage() {
                 <ActivityRow color="bg-emerald-500" label="Recovery Package Prepared" time="11:51 AM" />
               </>
             ) : (
-              recent.map((a) => (
-                <ActivityRow
-                  key={a.id}
-                  color={a.severity === "critical" ? "bg-destructive" : a.severity === "warning" ? "bg-amber-500" : "bg-emerald-500"}
-                  label={a.message}
-                  time={new Date(a.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                />
-              ))
+              <>
+                {allActivity.slice(0, 4).map((a) => (
+                  <ActivityRow
+                    key={a.id}
+                    color={a.severity === "critical" ? "bg-destructive" : a.severity === "warning" ? "bg-amber-500" : "bg-emerald-500"}
+                    label={a.message}
+                    time={new Date(a.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  />
+                ))}
+                <AnimatePresence initial={false}>
+                  {showAllActivity && allActivity.length > 4 && (
+                    <motion.div
+                      key="extra-activity"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="space-y-3 pt-3">
+                        {allActivity.slice(4).map((a) => (
+                          <ActivityRow
+                            key={a.id}
+                            color={a.severity === "critical" ? "bg-destructive" : a.severity === "warning" ? "bg-amber-500" : "bg-emerald-500"}
+                            label={a.message}
+                            time={new Date(a.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          />
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
             )}
           </div>
           {allActivity.length > 4 && (

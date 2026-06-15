@@ -39,6 +39,7 @@ export function TransferPage() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [editingTracked, setEditingTracked] = useState<string | null>(null);
   const [editAddress, setEditAddress] = useState("");
+  const [showAllTx, setShowAllTx] = useState(false);
 
   const [benForm, setBenForm] = useState({ name: "", email: "", walletAddress: "", allocationPercent: "0" });
   const [assetForm, setAssetForm] = useState({ symbol: "USDC", name: "USD Coin", amount: "", beneficiaryId: "" });
@@ -62,21 +63,21 @@ export function TransferPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 space-y-10">
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between gap-4 flex-wrap">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
               <Coins className="w-5 h-5 text-primary" />
             </div>
             <h1 className="text-3xl font-bold">Auto Transfer</h1>
           </div>
-          <p className="text-muted-foreground">Configure beneficiaries, deposit to the vault, and track external wallets.</p>
+          <p className="text-muted-foreground text-sm">Configure beneficiaries, deposit to the vault, and track external wallets.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button size="lg" onClick={() => setShowDeposit(true)} className="rounded-full shadow-lg shadow-primary/20">
+        <div className="flex items-center gap-2 sm:flex-shrink-0">
+          <Button size="lg" onClick={() => setShowDeposit(true)} className="rounded-full shadow-lg shadow-primary/20 flex-1 sm:flex-none">
             <ArrowDownToLine className="w-4 h-4 mr-2" /> Deposit to Vault
           </Button>
-          <Button size="lg" variant="outline" onClick={() => setShowWithdraw(true)} className="rounded-full">
+          <Button size="lg" variant="outline" onClick={() => setShowWithdraw(true)} className="rounded-full flex-1 sm:flex-none">
             <ArrowUpFromLine className="w-4 h-4 mr-2" /> Withdraw
           </Button>
         </div>
@@ -262,26 +263,71 @@ export function TransferPage() {
       {(transactions ?? []).length > 0 && (
         <section>
           <h2 className="text-xl font-bold flex items-center gap-2 mb-4"><ArrowDownToLine className="w-5 h-5" /> Recent Transactions</h2>
-          <div className="bg-card border border-border rounded-2xl divide-y divide-border">
-            {(transactions ?? []).slice(0, 8).map((tx) => {
+          <div className="bg-card border border-border rounded-2xl divide-y divide-border overflow-hidden">
+            {(transactions ?? []).slice(0, 4).map((tx) => {
               const isWithdraw = tx.status === "withdraw";
               return (
-                <div key={tx.id} className="flex items-center gap-4 p-4">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${isWithdraw ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"}`}>
+                <div key={tx.id} className="flex items-center gap-3 p-4">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${isWithdraw ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"}`}>
                     {isWithdraw ? <ArrowUpFromLine className="w-4 h-4" /> : <ArrowDownToLine className="w-4 h-4" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium">{isWithdraw ? "−" : "+"}{tx.amount} {tx.token}</p>
-                    <p className="text-xs text-muted-foreground">{isWithdraw ? "Withdrawal" : "Deposit"} · {new Date(tx.createdAt).toLocaleString()}</p>
+                    <p className="font-medium text-sm">{isWithdraw ? "−" : "+"}{tx.amount} {tx.token}</p>
+                    <p className="text-xs text-muted-foreground truncate">{isWithdraw ? "Withdrawal" : "Deposit"} · {new Date(tx.createdAt).toLocaleString()}</p>
                   </div>
                   <a href={`${ARC_CHAIN.explorer}/tx/${tx.txHash}`} target="_blank" rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1 flex-shrink-0">
                     Tx <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
               );
             })}
+            <AnimatePresence initial={false}>
+              {showAllTx && (transactions ?? []).length > 4 && (
+                <motion.div
+                  key="extra-tx"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <div className="divide-y divide-border">
+                    {(transactions ?? []).slice(4).map((tx) => {
+                      const isWithdraw = tx.status === "withdraw";
+                      return (
+                        <div key={tx.id} className="flex items-center gap-3 p-4">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${isWithdraw ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"}`}>
+                            {isWithdraw ? <ArrowUpFromLine className="w-4 h-4" /> : <ArrowDownToLine className="w-4 h-4" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{isWithdraw ? "−" : "+"}{tx.amount} {tx.token}</p>
+                            <p className="text-xs text-muted-foreground truncate">{isWithdraw ? "Withdrawal" : "Deposit"} · {new Date(tx.createdAt).toLocaleString()}</p>
+                          </div>
+                          <a href={`${ARC_CHAIN.explorer}/tx/${tx.txHash}`} target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline inline-flex items-center gap-1 flex-shrink-0">
+                            Tx <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
+          {(transactions ?? []).length > 4 && (
+            <button
+              onClick={() => setShowAllTx((v) => !v)}
+              className="w-full mt-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground border border-border rounded-xl hover:bg-muted/40 transition-colors flex items-center justify-center gap-1.5"
+            >
+              {showAllTx ? (
+                <><ChevronDown className="w-4 h-4 rotate-180" /> Collapse</>
+              ) : (
+                <><ChevronDown className="w-4 h-4" /> Show all {(transactions ?? []).length} transactions</>
+              )}
+            </button>
+          )}
         </section>
       )}
 
@@ -372,11 +418,11 @@ function BatchTransferTimeline({ inactivityDays }: { inactivityDays: number }) {
               </div>
 
               <div className="space-y-3 relative">
-                <div className="absolute left-4 top-5 bottom-5 w-px bg-border/60" />
+                <div className="absolute left-3 sm:left-4 top-5 bottom-5 w-px bg-border/60" />
 
                 {BATCH_STAGES.map((stage, i) => (
-                  <div key={i} className={`relative ml-10 border ${stage.bg} rounded-xl p-4`}>
-                    <div className={`absolute -left-6 top-4 w-3 h-3 rounded-full border-2 border-background ${stage.dot}`} />
+                  <div key={i} className={`relative ml-8 sm:ml-10 border ${stage.bg} rounded-xl p-3 sm:p-4`}>
+                    <div className={`absolute -left-5 sm:-left-6 top-4 w-3 h-3 rounded-full border-2 border-background ${stage.dot}`} />
                     <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
                       <p className={`font-semibold text-sm ${stage.labelColor}`}>{stage.label}</p>
                       <span className="text-[10px] font-mono border border-current opacity-70 px-2 py-0.5 rounded text-muted-foreground whitespace-nowrap">
