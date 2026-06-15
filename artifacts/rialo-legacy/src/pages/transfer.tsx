@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Coins, Plus, Trash2, Users, ArrowDownToLine, ArrowUpFromLine, Wallet, Eye, RefreshCw, ExternalLink, Siren, AlertTriangle, Bell, Mail, Smartphone, MessageSquare, Hash, ChevronDown } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,12 +14,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { DepositModal } from "@/components/deposit-modal";
 import { WithdrawModal } from "@/components/withdraw-modal";
-import { ARC_CHAIN, fetchVaultBalanceFromRpc } from "@/lib/chain";
-import { useAuth } from "@/components/auth-provider";
+import { ARC_CHAIN } from "@/lib/chain";
+import { useVaultBalance } from "@/hooks/use-vault-balance";
 
 export function TransferPage() {
   const qc = useQueryClient();
-  const { user } = useAuth();
   const { data: bens } = useListBeneficiaries();
   const { data: assets } = useListAssets();
   const { data: tracked } = useListTrackedWallets();
@@ -45,30 +44,13 @@ export function TransferPage() {
   const [assetForm, setAssetForm] = useState({ symbol: "USDC", name: "USD Coin", amount: "", beneficiaryId: "" });
   const [trackedForm, setTrackedForm] = useState({ label: "", address: "" });
 
-  // On-chain vault balance — source of truth, fetched directly from the RPC
-  const [chainBalance, setChainBalance] = useState<string | null>(null);
-  const [chainBalanceLoading, setChainBalanceLoading] = useState(false);
-
-  const walletAddress: string | null =
-    (user?.user_metadata?.["wallet_address"] as string | undefined) ??
-    (user?.email?.endsWith("@wallet.arkive.app")
-      ? `0x${user.email.slice(1, -"@wallet.arkive.app".length)}`
-      : null);
-
-  useEffect(() => {
-    if (!walletAddress) return;
-    let cancelled = false;
-    setChainBalanceLoading(true);
-    fetchVaultBalanceFromRpc(walletAddress)
-      .then((bal) => { if (!cancelled) { setChainBalance(bal); setChainBalanceLoading(false); } })
-      .catch(() => { if (!cancelled) setChainBalanceLoading(false); });
-    return () => { cancelled = true; };
-  }, [walletAddress, transactions]); // re-fetch after any recorded tx
+  // Use the same vault balance hook as the dashboard — reads from window.ethereum directly
+  const vault = useVaultBalance();
 
   const totalAllocation = (bens ?? []).reduce((s, b) => s + Number(b.allocationPercent || 0), 0);
   const totalAssets = (assets ?? []).length;
   const unassignedAssets = (assets ?? []).filter((a) => !a.beneficiaryId).length;
-  const displayBalance = chainBalance ?? "—";
+  const displayBalance = vault.balance ?? "—";
 
   function canEditTracked(lastUpdatedAt: string) {
     return Date.now() - new Date(lastUpdatedAt).getTime() > 30 * 24 * 60 * 60 * 1000;
@@ -104,14 +86,14 @@ export function TransferPage() {
         <div className="bg-card border border-border rounded-2xl p-5">
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Vault Balance</p>
           <p className="text-2xl font-bold mt-1">
-            {chainBalanceLoading ? (
+            {vault.loading && vault.balance === null ? (
               <span className="text-muted-foreground text-base animate-pulse">Loading…</span>
             ) : (
               <>{displayBalance} <span className="text-sm font-normal text-muted-foreground">USDC</span></>
             )}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {walletAddress ? "Live from Arc chain" : "Connect a wallet to see balance"} · {(transactions ?? []).length} tx
+            {vault.address ? (vault.onArc ? "Live · Arc Testnet" : "Switch to Arc Testnet") : "Connect a wallet to see balance"} · {(transactions ?? []).length} tx
           </p>
         </div>
         <div className="bg-card border border-border rounded-2xl p-5">
@@ -297,8 +279,8 @@ export function TransferPage() {
         <BatchTransferTimeline inactivityDays={90} />
       </section>
 
-      <AnimatePresence>{showDeposit && <DepositModal onClose={() => setShowDeposit(false)} />}</AnimatePresence>
-      <AnimatePresence>{showWithdraw && <WithdrawModal onClose={() => setShowWithdraw(false)} />}</AnimatePresence>
+      <AnimatePresence>{showDeposit && <DepositModal onClose={() => { setShowDeposit(false); vault.refresh(); }} />}</AnimatePresence>
+      <AnimatePresence>{showWithdraw && <WithdrawModal onClose={() => { setShowWithdraw(false); vault.refresh(); }} />}</AnimatePresence>
     </div>
   );
 }
