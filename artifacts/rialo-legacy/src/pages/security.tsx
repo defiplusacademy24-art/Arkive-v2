@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   Settings, Save, Activity, Clock, CheckCircle2, AlertTriangle,
   User, Mail, AtSign, MessageSquare, Hash, Bell, Smartphone, Shield,
-  Wallet, Link2, Unlink, Loader2, Server, ExternalLink, X,
+  Wallet, Link2, Unlink, Loader2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -18,7 +18,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getApiBase, API_BASE_STORAGE_KEY } from "@/components/auth-wallet-modal";
 
 export function SecurityPage() {
   const qc = useQueryClient();
@@ -216,9 +215,6 @@ export function SecurityPage() {
 
       {/* Linked Wallet */}
       <LinkedWalletSection user={user} />
-
-      {/* API Server */}
-      <ApiServerSection />
 
       {/* Notification Channels */}
       <div className="bg-card border border-border rounded-2xl p-6 mb-5">
@@ -555,109 +551,6 @@ function LinkedWalletSection({ user }: { user: import("@supabase/supabase-js").U
 
       <p className="text-[11px] text-muted-foreground mt-3">
         You'll be asked to sign a message — no transaction or gas required.
-      </p>
-    </div>
-  );
-}
-
-function ApiServerSection() {
-  const buildTimeUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
-  const [stored, setStored] = useState(() => {
-    try { return localStorage.getItem(API_BASE_STORAGE_KEY) ?? ""; } catch { return ""; }
-  });
-  const [input, setInput] = useState(stored);
-  const [saved, setSaved] = useState(false);
-
-  const effectiveUrl = stored || buildTimeUrl || window.location.origin;
-  const source = stored ? "saved" : buildTimeUrl ? "env" : "default";
-
-  function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = input.trim();
-    try {
-      if (trimmed) {
-        localStorage.setItem(API_BASE_STORAGE_KEY, trimmed);
-      } else {
-        localStorage.removeItem(API_BASE_STORAGE_KEY);
-      }
-    } catch {}
-    setStored(trimmed);
-    setSaved(true);
-    toast.success(trimmed ? "API server URL saved" : "API URL cleared — using default");
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  function handleClear() {
-    try { localStorage.removeItem(API_BASE_STORAGE_KEY); } catch {}
-    setStored("");
-    setInput("");
-    toast.success("Cleared — using default API URL");
-  }
-
-  return (
-    <div className="bg-card border border-border rounded-2xl p-6 mb-5">
-      <div className="flex items-center gap-2 mb-1">
-        <Server className="w-4 h-4 text-primary" />
-        <h3 className="font-bold">API Server</h3>
-      </div>
-      <p className="text-sm text-muted-foreground mb-4">
-        Set the base URL of your Arkive API server. Required for wallet signup without email confirmation on external deployments like Vercel.
-      </p>
-
-      <div className="rounded-xl bg-muted/50 border border-border px-4 py-3 mb-4 space-y-1.5">
-        <p className="text-[10px] uppercase tracking-widest font-semibold text-muted-foreground">Currently Using</p>
-        <p className="text-sm font-mono break-all text-foreground">{effectiveUrl}</p>
-        <div className="flex items-center gap-1.5">
-          {source === "saved" && (
-            <span className="text-[10px] font-semibold bg-primary/15 text-primary px-2 py-0.5 rounded-full">Saved override</span>
-          )}
-          {source === "env" && (
-            <span className="text-[10px] font-semibold bg-emerald-500/15 text-emerald-500 px-2 py-0.5 rounded-full">Build-time env var</span>
-          )}
-          {source === "default" && (
-            <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Same origin (default)</span>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-xl bg-amber-500/8 border border-amber-500/25 px-4 py-3 mb-4">
-        <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-1">Do you need to set this?</p>
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">No</span> — wallet login and signup now work client-side as a fallback.
-          You only need this if you want <span className="font-medium text-foreground">new wallet accounts to skip email confirmation</span>.
-          In that case, deploy the Arkive API server separately and paste its URL below.
-        </p>
-      </div>
-
-      <form onSubmit={handleSave} className="flex flex-col sm:flex-row gap-2">
-        <div className="flex-1 relative">
-          <Server className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-9 font-mono text-sm"
-            placeholder="https://your-api.example.com"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            type="url"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button type="submit" size="sm" className="rounded-full" disabled={saved}>
-            {saved ? <CheckCircle2 className="w-4 h-4 mr-1.5 text-emerald-400" /> : <Save className="w-4 h-4 mr-1.5" />}
-            {saved ? "Saved!" : "Save URL"}
-          </Button>
-          {stored && (
-            <Button type="button" size="sm" variant="outline" className="rounded-full" onClick={handleClear}>
-              <X className="w-3.5 h-3.5 mr-1.5" /> Clear
-            </Button>
-          )}
-        </div>
-      </form>
-
-      <p className="text-[11px] text-muted-foreground mt-3">
-        This is saved in your browser only and takes priority over the <code className="bg-muted px-1 py-0.5 rounded text-[10px]">VITE_API_BASE_URL</code> build-time variable.{" "}
-        <a href="https://vercel.com/docs/environment-variables" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5">
-          Vercel env vars <ExternalLink className="w-2.5 h-2.5" />
-        </a>
       </p>
     </div>
   );

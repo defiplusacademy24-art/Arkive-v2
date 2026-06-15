@@ -39,6 +39,7 @@ export function DashboardPage() {
   const { data: activity } = useListActivity();
   const { data: assets } = useListAssets();
   const [showPanicConfirm, setShowPanicConfirm] = useState(false);
+  const [showAllActivity, setShowAllActivity] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const vault = useVaultBalance();
@@ -71,7 +72,8 @@ export function DashboardPage() {
 
   const status = summary?.status ?? "active";
   const isAlert = status !== "active";
-  const recent = (activity ?? []).slice(0, 4);
+  const allActivity = activity ?? [];
+  const recent = showAllActivity ? allActivity : allActivity.slice(0, 4);
   const wishes = (assets && assets.length > 0)
     ? assets.slice(0, 4).map((a) => ({
         icon: DollarSign,
@@ -358,7 +360,7 @@ export function DashboardPage() {
             <Activity className="w-4 h-4 text-primary" /> Recent Activity
           </h3>
           <div className="space-y-3">
-            {recent.length === 0 ? (
+            {allActivity.length === 0 ? (
               <>
                 <ActivityRow color="bg-emerald-500" label="Check-In Reminder Sent" time="02:41 PM" />
                 <ActivityRow color="bg-emerald-500" label="Guardian Approval Received" time="01:51 PM" />
@@ -376,11 +378,19 @@ export function DashboardPage() {
               ))
             )}
           </div>
-          <Link href="/activity">
-            <Button variant="outline" className="w-full mt-5 rounded-full">
-              View All <ArrowRight className="w-3.5 h-3.5 ml-1" />
+          {allActivity.length > 4 && (
+            <Button
+              variant="outline"
+              className="w-full mt-5 rounded-full"
+              onClick={() => setShowAllActivity((v) => !v)}
+            >
+              {showAllActivity ? (
+                <>Collapse <ArrowRight className="w-3.5 h-3.5 ml-1 rotate-90" /></>
+              ) : (
+                <>View All ({allActivity.length}) <ArrowRight className="w-3.5 h-3.5 ml-1" /></>
+              )}
             </Button>
-          </Link>
+          )}
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-6">

@@ -84,7 +84,17 @@ export function TransferPage() {
 
       <div className="grid sm:grid-cols-3 gap-4">
         <div className="bg-card border border-border rounded-2xl p-5">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Vault Balance</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Vault Balance</p>
+            <button
+              onClick={vault.refresh}
+              disabled={vault.loading || !vault.address || !vault.onArc}
+              className="p-1 rounded-lg hover:bg-muted transition-colors disabled:opacity-40"
+              title="Refresh balance"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-muted-foreground ${vault.loading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
           <p className="text-2xl font-bold mt-1">
             {vault.loading && vault.balance === null ? (
               <span className="text-muted-foreground text-base animate-pulse">Loading…</span>
