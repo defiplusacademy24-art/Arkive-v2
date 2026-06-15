@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Coins, Plus, Trash2, Users, ArrowDownToLine, ArrowUpFromLine, Wallet, Eye, RefreshCw, ExternalLink, Siren, AlertTriangle, Bell, Mail, Smartphone, MessageSquare, Hash, ChevronDown, CheckCircle2, CircleDollarSign } from "lucide-react";
+import { Coins, Plus, Trash2, Users, ArrowDownToLine, ArrowUpFromLine, Wallet, Eye, RefreshCw, ExternalLink, Siren, AlertTriangle, Bell, Mail, Smartphone, MessageSquare, Hash, ChevronDown, Pencil, Check } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  useListAssets, useCreateAsset, useDeleteAsset, getListAssetsQueryKey,
-  useListBeneficiaries, useCreateBeneficiary, useDeleteBeneficiary, getListBeneficiariesQueryKey,
+  useListBeneficiaries, useCreateBeneficiary, useUpdateBeneficiary, useDeleteBeneficiary, getListBeneficiariesQueryKey,
   useListTrackedWallets, useCreateTrackedWallet, useUpdateTrackedWallet, useDeleteTrackedWallet, getListTrackedWalletsQueryKey,
   useListVaultDeposits,
 } from "@/lib/api";
@@ -20,37 +19,32 @@ import { useVaultBalance } from "@/hooks/use-vault-balance";
 export function TransferPage() {
   const qc = useQueryClient();
   const { data: bens } = useListBeneficiaries();
-  const { data: assets } = useListAssets();
   const { data: tracked } = useListTrackedWallets();
   const { data: transactions } = useListVaultDeposits();
 
-  const createBen = useCreateBeneficiary({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListBeneficiariesQueryKey() }); toast.success("Beneficiary added"); setBenOpen(false); } } });
+  const createBen = useCreateBeneficiary({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListBeneficiariesQueryKey() }); toast.success("Beneficiary added"); setBenOpen(false); setBenForm({ name: "", email: "", walletAddress: "", allocationPercent: "0" }); } } });
   const delBen = useDeleteBeneficiary({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListBeneficiariesQueryKey() }) } });
-  const createAsset = useCreateAsset({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListAssetsQueryKey() }); toast.success("Asset rule added"); setAssetOpen(false); } } });
-  const delAsset = useDeleteAsset({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListAssetsQueryKey() }) } });
+  const updateBen = useUpdateBeneficiary({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListBeneficiariesQueryKey() }); toast.success("Allocation updated"); setEditingBen(null); }, onError: (e: any) => toast.error(e?.message ?? "Update failed") } });
   const createTracked = useCreateTrackedWallet({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListTrackedWalletsQueryKey() }); toast.success("Wallet added to tracking"); setTrackedOpen(false); setTrackedForm({ label: "", address: "" }); }, onError: (e: any) => toast.error(e?.message ?? "Failed to add wallet") } });
   const updateTracked = useUpdateTrackedWallet({ mutation: { onSuccess: () => { qc.invalidateQueries({ queryKey: getListTrackedWalletsQueryKey() }); toast.success("Wallet updated"); }, onError: (e: any) => toast.error(e?.message ?? "Update blocked") } });
   const delTracked = useDeleteTrackedWallet({ mutation: { onSuccess: () => qc.invalidateQueries({ queryKey: getListTrackedWalletsQueryKey() }) } });
 
   const [benOpen, setBenOpen] = useState(false);
-  const [assetOpen, setAssetOpen] = useState(false);
   const [trackedOpen, setTrackedOpen] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [editingTracked, setEditingTracked] = useState<string | null>(null);
   const [editAddress, setEditAddress] = useState("");
   const [showAllTx, setShowAllTx] = useState(false);
+  const [editingBen, setEditingBen] = useState<string | null>(null);
+  const [editAllocPct, setEditAllocPct] = useState("");
 
   const [benForm, setBenForm] = useState({ name: "", email: "", walletAddress: "", allocationPercent: "0" });
-  const [assetForm, setAssetForm] = useState({ symbol: "USDC", name: "USD Coin", amount: "", beneficiaryId: "" });
   const [trackedForm, setTrackedForm] = useState({ label: "", address: "" });
 
-  // Use the same vault balance hook as the dashboard — reads from window.ethereum directly
   const vault = useVaultBalance();
 
   const totalAllocation = (bens ?? []).reduce((s, b) => s + Number(b.allocationPercent || 0), 0);
-  const totalAssets = (assets ?? []).length;
-  const unassignedAssets = (assets ?? []).filter((a) => !a.beneficiaryId).length;
   const displayBalance = vault.balance ?? "—";
 
   function canEditTracked(lastUpdatedAt: string) {
@@ -83,7 +77,7 @@ export function TransferPage() {
         </div>
       </motion.div>
 
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 gap-4">
         <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center justify-between mb-1">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Vault Balance</p>
@@ -108,16 +102,15 @@ export function TransferPage() {
           </p>
         </div>
         <div className="bg-card border border-border rounded-2xl p-5">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Allocation</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Allocation</p>
           <p className={`text-2xl font-bold mt-1 ${totalAllocation === 100 ? "text-emerald-500" : totalAllocation > 100 ? "text-destructive" : "text-amber-500"}`}>{totalAllocation}%</p>
           <div className="w-full h-1.5 bg-muted rounded-full mt-2 overflow-hidden">
             <div className={`h-full ${totalAllocation === 100 ? "bg-emerald-500" : totalAllocation > 100 ? "bg-destructive" : "bg-amber-500"}`} style={{ width: `${Math.min(100, totalAllocation)}%` }} />
           </div>
-        </div>
-        <div className="bg-card border border-border rounded-2xl p-5">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Asset Rules</p>
-          <p className="text-2xl font-bold mt-1">{totalAssets}</p>
-          <p className={`text-xs mt-1 ${unassignedAssets === 0 ? "text-emerald-500" : "text-amber-500"}`}>{unassignedAssets === 0 ? "All routed" : `${unassignedAssets} unassigned`}</p>
+          <p className="text-xs text-muted-foreground mt-1.5">
+            {totalAllocation === 100 ? "Fully allocated" : totalAllocation > 100 ? "Over 100% — reduce allocations" : `${100 - totalAllocation}% unallocated`}
+            {(bens ?? []).length > 0 && ` · ${(bens ?? []).length} beneficiar${(bens ?? []).length === 1 ? "y" : "ies"}`}
+          </p>
         </div>
       </div>
 
@@ -141,182 +134,91 @@ export function TransferPage() {
         )}
         <div className="bg-card border border-border rounded-2xl divide-y divide-border">
           {(bens ?? []).length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground text-sm">No beneficiaries yet.</div>
-          ) : (bens ?? []).map((b) => (
-            <div key={b.id} className="flex items-center gap-4 p-4">
-              <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm">{b.name[0]?.toUpperCase()}</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">{b.name}</p>
-                <p className="text-xs text-muted-foreground">{b.email} · {b.allocationPercent}%</p>
-              </div>
-              <button onClick={() => delBen.mutate({ id: b.id })} className="text-muted-foreground hover:text-destructive p-1.5"><Trash2 className="w-4 h-4" /></button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold flex items-center gap-2"><Coins className="w-5 h-5" /> Asset Rules</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Assign specific assets to beneficiaries for automatic transfer</p>
-          </div>
-          <Button size="sm" onClick={() => setAssetOpen(!assetOpen)} className="rounded-full"><Plus className="w-4 h-4 mr-1" /> Assign</Button>
-        </div>
-
-        <AnimatePresence initial={false}>
-          {assetOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="overflow-hidden mb-4"
-            >
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!assetForm.beneficiaryId) { toast.error("Please select a beneficiary"); return; }
-                  if (!assetForm.amount || parseFloat(assetForm.amount) <= 0) { toast.error("Enter a valid amount"); return; }
-                  createAsset.mutate({ data: { symbol: assetForm.symbol, name: assetForm.name, amount: assetForm.amount, valueUsd: "0", beneficiaryId: assetForm.beneficiaryId } as any });
-                }}
-                className="bg-card border border-border rounded-2xl p-5 space-y-5"
-              >
-                {/* Step 1 — Beneficiary */}
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">1 · Select Beneficiary</p>
-                  {(bens ?? []).length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-border p-5 text-center">
-                      <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
-                      <p className="text-sm text-muted-foreground">Add a beneficiary first before creating asset rules.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {(bens ?? []).map((b) => (
-                        <button
-                          key={b.id}
-                          type="button"
-                          onClick={() => setAssetForm((f) => ({ ...f, beneficiaryId: b.id }))}
-                          className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                            assetForm.beneficiaryId === b.id
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                              : "border-border hover:border-primary/40 hover:bg-muted/40"
-                          }`}
-                        >
-                          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                            {b.name[0]?.toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{b.name}</p>
-                            <p className="text-xs text-muted-foreground">{b.allocationPercent}% of vault</p>
-                          </div>
-                          {assetForm.beneficiaryId === b.id && (
-                            <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Step 2 — Token */}
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">2 · Select Token</p>
-                  <div className="flex flex-wrap gap-2">
-                    {ASSET_TOKENS.map((t) => (
-                      <button
-                        key={t.symbol}
-                        type="button"
-                        onClick={() => setAssetForm((f) => ({ ...f, symbol: t.symbol, name: t.name }))}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
-                          assetForm.symbol === t.symbol
-                            ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/30"
-                            : "border-border hover:border-primary/40 hover:bg-muted/40 text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${t.color}`}>{t.symbol[0]}</span>
-                        {t.symbol}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Step 3 — Amount */}
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">3 · Set Amount</p>
-                  <div className="relative">
-                    <CircleDollarSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      required
-                      type="number"
-                      step="any"
-                      min="0"
-                      placeholder={`Amount in ${assetForm.symbol}`}
-                      value={assetForm.amount}
-                      onChange={(e) => setAssetForm((f) => ({ ...f, amount: e.target.value }))}
-                      className="pl-9"
-                    />
-                  </div>
-                  {assetForm.beneficiaryId && assetForm.amount && (
-                    <p className="text-xs text-muted-foreground mt-1.5">
-                      {assetForm.amount} {assetForm.symbol} will be routed to{" "}
-                      <span className="font-medium text-foreground">
-                        {(bens ?? []).find((b) => b.id === assetForm.beneficiaryId)?.name ?? "selected beneficiary"}
-                      </span>
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex justify-end gap-2 pt-1">
-                  <Button type="button" variant="outline" className="rounded-full" onClick={() => { setAssetOpen(false); setAssetForm({ symbol: "USDC", name: "USD Coin", amount: "", beneficiaryId: "" }); }}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="rounded-full" disabled={createAsset.isPending || !assetForm.beneficiaryId || !assetForm.amount}>
-                    {createAsset.isPending ? "Saving…" : "Assign Asset"}
-                  </Button>
-                </div>
-              </form>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="bg-card border border-border rounded-2xl divide-y divide-border">
-          {(assets ?? []).length === 0 ? (
-            <div className="p-8 text-center">
-              <CircleDollarSign className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
-              <p className="text-sm text-muted-foreground">No asset rules yet.</p>
-              <p className="text-xs text-muted-foreground mt-1">Click <span className="font-medium text-foreground">Assign</span> above to route assets to your beneficiaries.</p>
-            </div>
-          ) : (assets ?? []).map((a) => {
-            const tokenMeta = ASSET_TOKENS.find((t) => t.symbol === a.symbol);
-            const ben = (bens ?? []).find((b) => b.id === a.beneficiaryId);
+            <div className="p-8 text-center text-muted-foreground text-sm">No beneficiaries yet. Add one above to get started.</div>
+          ) : (bens ?? []).map((b) => {
+            const isEditingThis = editingBen === b.id;
             return (
-              <div key={a.id} className="flex items-center gap-3 p-4">
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${tokenMeta?.color ?? "bg-primary/10 text-primary"}`}>
-                  {a.symbol.slice(0, 3)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{a.amount} {a.symbol}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {ben ? (
-                      <>
-                        <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-                          {ben.name[0]?.toUpperCase()}
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">→ {ben.name} · {ben.allocationPercent}% allocation</p>
-                      </>
-                    ) : (
-                      <p className="text-xs text-amber-500">Unassigned — select a beneficiary</p>
-                    )}
+              <div key={b.id} className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                    {b.name[0]?.toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{b.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{b.email}</p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${Number(b.allocationPercent) > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                      {b.allocationPercent}%
+                    </span>
+                    <button
+                      onClick={() => { setEditingBen(b.id); setEditAllocPct(String(b.allocationPercent)); }}
+                      className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
+                      title="Edit allocation"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => delBen.mutate({ id: b.id })} className="p-1.5 text-muted-foreground hover:text-destructive rounded-lg hover:bg-muted transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-                <button onClick={() => delAsset.mutate({ id: a.id })} className="text-muted-foreground hover:text-destructive p-1.5 flex-shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+
+                <AnimatePresence initial={false}>
+                  {isEditingThis && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 flex items-center gap-2 pl-12">
+                        <div className="relative flex-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={editAllocPct}
+                            onChange={(e) => setEditAllocPct(e.target.value)}
+                            className="pr-8 h-8 text-sm"
+                            placeholder="0–100"
+                            autoFocus
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="h-8 rounded-lg px-3"
+                          disabled={updateBen.isPending}
+                          onClick={() => updateBen.mutate({ id: b.id, data: { allocationPercent: Number(editAllocPct) } as any })}
+                        >
+                          <Check className="w-3.5 h-3.5 mr-1" /> Save
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-8 rounded-lg px-3" onClick={() => setEditingBen(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1.5 pl-12">
+                        Total after change: {totalAllocation - Number(b.allocationPercent) + Number(editAllocPct || 0)}% of 100%
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}
         </div>
+
+        {(bens ?? []).length > 0 && totalAllocation !== 100 && (
+          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs mt-2 ${totalAllocation > 100 ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"}`}>
+            <span className="font-semibold">{totalAllocation > 100 ? "Over-allocated:" : "Heads up:"}</span>
+            {totalAllocation > 100
+              ? `Total is ${totalAllocation}% — reduce allocations to stay within 100%.`
+              : `${100 - totalAllocation}% is unallocated. Edit a beneficiary's % to reach 100%.`}
+          </div>
+        )}
       </section>
 
       <section>
@@ -463,15 +365,6 @@ export function TransferPage() {
     </div>
   );
 }
-
-const ASSET_TOKENS = [
-  { symbol: "USDC", name: "USD Coin",      color: "bg-blue-500/10 text-blue-500" },
-  { symbol: "ETH",  name: "Ethereum",      color: "bg-indigo-500/10 text-indigo-500" },
-  { symbol: "USDT", name: "Tether USD",    color: "bg-emerald-500/10 text-emerald-500" },
-  { symbol: "BTC",  name: "Bitcoin",       color: "bg-amber-500/10 text-amber-500" },
-  { symbol: "DAI",  name: "Dai",           color: "bg-yellow-500/10 text-yellow-600" },
-  { symbol: "ARK",  name: "Arkive Token",  color: "bg-primary/10 text-primary" },
-];
 
 const BATCH_STAGES = [
   {
