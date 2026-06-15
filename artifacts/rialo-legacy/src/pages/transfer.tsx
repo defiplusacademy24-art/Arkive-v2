@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Coins, Plus, Trash2, Users, ArrowDownToLine, ArrowUpFromLine, Wallet, Eye, RefreshCw, ExternalLink, Siren, AlertTriangle, Bell, Mail, Smartphone, MessageSquare, Hash, ChevronDown } from "lucide-react";
+import { Coins, Plus, Trash2, Users, ArrowDownToLine, ArrowUpFromLine, Wallet, Eye, RefreshCw, ExternalLink, Siren, AlertTriangle, Bell, Mail, Smartphone, MessageSquare, Hash, ChevronDown, CheckCircle2, CircleDollarSign } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListAssets, useCreateAsset, useDeleteAsset, getListAssetsQueryKey,
@@ -157,42 +157,165 @@ export function TransferPage() {
 
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold flex items-center gap-2"><Coins className="w-5 h-5" /> Asset Rules</h2>
-          <Button size="sm" onClick={() => setAssetOpen(!assetOpen)} className="rounded-full"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2"><Coins className="w-5 h-5" /> Asset Rules</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Assign specific assets to beneficiaries for automatic transfer</p>
+          </div>
+          <Button size="sm" onClick={() => setAssetOpen(!assetOpen)} className="rounded-full"><Plus className="w-4 h-4 mr-1" /> Assign</Button>
         </div>
-        {assetOpen && (
-          <form onSubmit={(e) => { e.preventDefault(); createAsset.mutate({ data: { ...assetForm, valueUsd: "0", beneficiaryId: assetForm.beneficiaryId || undefined } as any }); }}
-            className="bg-card border border-border rounded-2xl p-6 mb-4 grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>Symbol</Label><Input required value={assetForm.symbol} onChange={(e) => setAssetForm({ ...assetForm, symbol: e.target.value.toUpperCase() })} placeholder="USDC" /></div>
-            <div className="space-y-2"><Label>Name</Label><Input required value={assetForm.name} onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })} placeholder="USD Coin" /></div>
-            <div className="space-y-2"><Label>Amount</Label><Input required type="number" step="any" value={assetForm.amount} onChange={(e) => setAssetForm({ ...assetForm, amount: e.target.value })} /></div>
-            <div className="space-y-2">
-              <Label>Beneficiary</Label>
-              <select className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                value={assetForm.beneficiaryId} onChange={(e) => setAssetForm({ ...assetForm, beneficiaryId: e.target.value })}>
-                <option value="">— None —</option>
-                {(bens ?? []).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </div>
-            <div className="sm:col-span-2 flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setAssetOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createAsset.isPending}>Save</Button>
-            </div>
-          </form>
-        )}
+
+        <AnimatePresence initial={false}>
+          {assetOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="overflow-hidden mb-4"
+            >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!assetForm.beneficiaryId) { toast.error("Please select a beneficiary"); return; }
+                  if (!assetForm.amount || parseFloat(assetForm.amount) <= 0) { toast.error("Enter a valid amount"); return; }
+                  createAsset.mutate({ data: { symbol: assetForm.symbol, name: assetForm.name, amount: assetForm.amount, valueUsd: "0", beneficiaryId: assetForm.beneficiaryId } as any });
+                }}
+                className="bg-card border border-border rounded-2xl p-5 space-y-5"
+              >
+                {/* Step 1 — Beneficiary */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">1 · Select Beneficiary</p>
+                  {(bens ?? []).length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-border p-5 text-center">
+                      <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+                      <p className="text-sm text-muted-foreground">Add a beneficiary first before creating asset rules.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {(bens ?? []).map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => setAssetForm((f) => ({ ...f, beneficiaryId: b.id }))}
+                          className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                            assetForm.beneficiaryId === b.id
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                              : "border-border hover:border-primary/40 hover:bg-muted/40"
+                          }`}
+                        >
+                          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                            {b.name[0]?.toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{b.name}</p>
+                            <p className="text-xs text-muted-foreground">{b.allocationPercent}% of vault</p>
+                          </div>
+                          {assetForm.beneficiaryId === b.id && (
+                            <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Step 2 — Token */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">2 · Select Token</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ASSET_TOKENS.map((t) => (
+                      <button
+                        key={t.symbol}
+                        type="button"
+                        onClick={() => setAssetForm((f) => ({ ...f, symbol: t.symbol, name: t.name }))}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
+                          assetForm.symbol === t.symbol
+                            ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/30"
+                            : "border-border hover:border-primary/40 hover:bg-muted/40 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${t.color}`}>{t.symbol[0]}</span>
+                        {t.symbol}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Step 3 — Amount */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">3 · Set Amount</p>
+                  <div className="relative">
+                    <CircleDollarSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      required
+                      type="number"
+                      step="any"
+                      min="0"
+                      placeholder={`Amount in ${assetForm.symbol}`}
+                      value={assetForm.amount}
+                      onChange={(e) => setAssetForm((f) => ({ ...f, amount: e.target.value }))}
+                      className="pl-9"
+                    />
+                  </div>
+                  {assetForm.beneficiaryId && assetForm.amount && (
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      {assetForm.amount} {assetForm.symbol} will be routed to{" "}
+                      <span className="font-medium text-foreground">
+                        {(bens ?? []).find((b) => b.id === assetForm.beneficiaryId)?.name ?? "selected beneficiary"}
+                      </span>
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button type="button" variant="outline" className="rounded-full" onClick={() => { setAssetOpen(false); setAssetForm({ symbol: "USDC", name: "USD Coin", amount: "", beneficiaryId: "" }); }}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="rounded-full" disabled={createAsset.isPending || !assetForm.beneficiaryId || !assetForm.amount}>
+                    {createAsset.isPending ? "Saving…" : "Assign Asset"}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="bg-card border border-border rounded-2xl divide-y divide-border">
           {(assets ?? []).length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground text-sm">No transfer rules yet.</div>
-          ) : (assets ?? []).map((a) => (
-            <div key={a.id} className="flex items-center gap-4 p-4">
-              <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">{a.symbol.slice(0, 3)}</div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">{a.amount} {a.symbol}</p>
-                <p className="text-xs text-muted-foreground">{a.beneficiaryName ? `to ${a.beneficiaryName}` : "Unassigned"}</p>
-              </div>
-              <button onClick={() => delAsset.mutate({ id: a.id })} className="text-muted-foreground hover:text-destructive p-1.5"><Trash2 className="w-4 h-4" /></button>
+            <div className="p-8 text-center">
+              <CircleDollarSign className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No asset rules yet.</p>
+              <p className="text-xs text-muted-foreground mt-1">Click <span className="font-medium text-foreground">Assign</span> above to route assets to your beneficiaries.</p>
             </div>
-          ))}
+          ) : (assets ?? []).map((a) => {
+            const tokenMeta = ASSET_TOKENS.find((t) => t.symbol === a.symbol);
+            const ben = (bens ?? []).find((b) => b.id === a.beneficiaryId);
+            return (
+              <div key={a.id} className="flex items-center gap-3 p-4">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${tokenMeta?.color ?? "bg-primary/10 text-primary"}`}>
+                  {a.symbol.slice(0, 3)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{a.amount} {a.symbol}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {ben ? (
+                      <>
+                        <div className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                          {ben.name[0]?.toUpperCase()}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">→ {ben.name} · {ben.allocationPercent}% allocation</p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-amber-500">Unassigned — select a beneficiary</p>
+                    )}
+                  </div>
+                </div>
+                <button onClick={() => delAsset.mutate({ id: a.id })} className="text-muted-foreground hover:text-destructive p-1.5 flex-shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -340,6 +463,15 @@ export function TransferPage() {
     </div>
   );
 }
+
+const ASSET_TOKENS = [
+  { symbol: "USDC", name: "USD Coin",      color: "bg-blue-500/10 text-blue-500" },
+  { symbol: "ETH",  name: "Ethereum",      color: "bg-indigo-500/10 text-indigo-500" },
+  { symbol: "USDT", name: "Tether USD",    color: "bg-emerald-500/10 text-emerald-500" },
+  { symbol: "BTC",  name: "Bitcoin",       color: "bg-amber-500/10 text-amber-500" },
+  { symbol: "DAI",  name: "Dai",           color: "bg-yellow-500/10 text-yellow-600" },
+  { symbol: "ARK",  name: "Arkive Token",  color: "bg-primary/10 text-primary" },
+];
 
 const BATCH_STAGES = [
   {
