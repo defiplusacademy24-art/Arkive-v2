@@ -29,7 +29,7 @@ export function RecoveryPage() {
         className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Recovery Package</h1>
-          <p className="text-muted-foreground mt-1">Encrypted instructions accessible only when guardians approve.</p>
+          <p className="text-muted-foreground mt-1">Encrypted instructions accessible only when guardians threshold approval is reached.</p>
         </div>
         <div className="flex items-center gap-3 bg-card border border-border rounded-full px-4 py-2 shadow-sm">
           <Switch checked={enabled} onCheckedChange={setEnabled} />
@@ -44,7 +44,7 @@ export function RecoveryPage() {
             <Lock className="w-5 h-5 text-primary" /> Encrypted Instructions Payload
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Write plain text here. Upon saving, it is client-side encrypted. Guardians must combine their keys to decrypt this payload for beneficiaries.
+            Store optional instructions, account details, or personal messages for your beneficiaries. Upon saving, this package is encrypted and can only be unlocked after the required guardian approval threshold is reached.
           </p>
           {editing ? (
             <div className="space-y-3">
