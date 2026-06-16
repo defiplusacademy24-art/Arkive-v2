@@ -2,9 +2,12 @@ import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Settings, Save, Activity, Clock, CheckCircle2, AlertTriangle,
-  User, Mail, AtSign, MessageSquare, Hash, Bell, Smartphone, Shield,
+  User, Mail, AtSign, Bell, Shield,
   Wallet, Link2, Unlink, Loader2,
 } from "lucide-react";
+import telegramLogo from "@/assets/telegram.jpg";
+import whatsappLogo from "@/assets/whatsapp.jpg";
+import discordLogo from "@/assets/discord.png";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetInactivitySettings, useUpdateInactivitySettings, getGetInactivitySettingsQueryKey,
@@ -229,7 +232,7 @@ export function SecurityPage() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
-                <Smartphone className="w-3.5 h-3.5 text-emerald-500" /> WhatsApp Number
+                <img src={whatsappLogo} alt="WhatsApp" className="w-4 h-4 rounded-sm object-cover" /> WhatsApp Number
               </Label>
               <Input
                 type="tel"
@@ -241,7 +244,7 @@ export function SecurityPage() {
             </div>
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
-                <MessageSquare className="w-3.5 h-3.5 text-sky-500" /> Telegram Username
+                <img src={telegramLogo} alt="Telegram" className="w-4 h-4 rounded-full object-cover" /> Telegram Username
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm select-none">@</span>
@@ -255,7 +258,7 @@ export function SecurityPage() {
             </div>
             <div className="space-y-2 sm:col-span-2 sm:max-w-xs">
               <Label className="flex items-center gap-2">
-                <Hash className="w-3.5 h-3.5 text-indigo-500" /> Discord Username
+                <img src={discordLogo} alt="Discord" className="w-4 h-4 rounded-sm object-cover" /> Discord Username
               </Label>
               <Input
                 placeholder="username or username#0000"

@@ -151,7 +151,19 @@ export function AuthWalletModal({ onClose, onSuccess }: Props) {
 
       const { email, password } = walletCredentials(normalAddress);
 
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      // Try new credential format first, then fall back to legacy domain for existing accounts
+      let signInData: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"] | null = null;
+      let signInError: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["error"] = null;
+      ({ data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password }));
+      if (signInError && (signInError.message?.toLowerCase().includes("invalid") || signInError.status === 400)) {
+        // Attempt legacy format (@wallet.arkive.app)
+        const legacyEmail = `w${normalAddress.slice(2)}@wallet.arkive.app`;
+        const legacyResult = await supabase.auth.signInWithPassword({ email: legacyEmail, password });
+        if (legacyResult.data?.session) {
+          signInData = legacyResult.data;
+          signInError = null;
+        }
+      }
 
       if (signInData.session) {
         setConnectedAddress(normalAddress);

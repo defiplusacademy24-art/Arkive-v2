@@ -16,6 +16,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useVaultBalance } from "@/hooks/use-vault-balance";
+import { switchToArc } from "@/lib/chain";
 import { DepositModal } from "@/components/deposit-modal";
 import { WithdrawModal } from "@/components/withdraw-modal";
 
@@ -42,6 +43,7 @@ export function DashboardPage() {
   const [showAllActivity, setShowAllActivity] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [switchingNetwork, setSwitchingNetwork] = useState(false);
   const vault = useVaultBalance();
   const vaultHasBalance = !!vault.balance && parseFloat(vault.balance) > 0;
 
@@ -270,9 +272,32 @@ export function DashboardPage() {
                   Connect wallet to view balance
                 </p>
               ) : !vault.onArc ? (
-                <p className="text-sm text-amber-500 text-center py-4">
-                  Switch to Arc Testnet to view
-                </p>
+                <div className="py-3 text-center space-y-2.5">
+                  <p className="text-sm text-amber-500">Not on Arc Testnet</p>
+                  <button
+                    onClick={async () => {
+                      const provider = (window as any).ethereum;
+                      if (!provider) { toast.error("No wallet connected"); return; }
+                      setSwitchingNetwork(true);
+                      try {
+                        await switchToArc(provider);
+                        toast.success("Switched to Arc Testnet");
+                      } catch (e: any) {
+                        toast.error(e?.message ?? "Could not switch network");
+                      } finally {
+                        setSwitchingNetwork(false);
+                      }
+                    }}
+                    disabled={switchingNetwork}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 text-xs font-semibold transition-colors disabled:opacity-60"
+                  >
+                    {switchingNetwork ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Switching…</>
+                    ) : (
+                      <><Zap className="w-3.5 h-3.5" /> Switch to Arc Testnet</>
+                    )}
+                  </button>
+                </div>
               ) : vault.loading && vault.balance === null ? (
                 <div className="h-10 bg-muted/50 rounded-xl animate-pulse mb-4" />
               ) : (
