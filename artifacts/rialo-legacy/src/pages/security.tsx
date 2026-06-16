@@ -427,7 +427,7 @@ type Eip1193Provider = { request: (args: { method: string; params?: unknown[] })
 
 function LinkedWalletSection({ user }: { user: import("@supabase/supabase-js").User | null }) {
   const linkedAddress = (user?.user_metadata?.["wallet_address"] as string | undefined) ?? null;
-  const isWalletUser = user?.email?.endsWith("@wallet.arkive.app") ?? false;
+  const isWalletUser = user?.email?.match(/^wk[0-9a-f]{40}@arkive\.app$/) != null;
 
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<"idle" | "connecting" | "signing">("idle");

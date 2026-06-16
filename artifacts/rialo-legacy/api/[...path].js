@@ -10,10 +10,10 @@ function getAdminClient() {
 }
 
 function walletCredentials(addr) {
-  const normal = addr.toLowerCase();
+  const hex = addr.toLowerCase().slice(2);
   return {
-    email: `w${normal.slice(2)}@wallet.arkive.app`,
-    password: `wk_${normal.slice(2)}`,
+    email: `wk${hex}@arkive.app`,
+    password: `wk_${hex}`,
   };
 }
 
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
         (u) =>
           u.user_metadata?.wallet_address?.toLowerCase() === normal &&
           u.email &&
-          !u.email.endsWith("@wallet.arkive.app"),
+          !u.email.match(/^wk[0-9a-f]{40}@arkive\.app$/),
       );
       if (!linked?.email) { res.status(404).json({ error: "No linked account found" }); return; }
       const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({

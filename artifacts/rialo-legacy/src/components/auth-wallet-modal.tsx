@@ -39,8 +39,9 @@ type DiscoveredWallet = { id: string; name: string; icon: string; provider?: Eip
 type Step = "select" | "connecting" | "signing" | "email" | "success";
 
 function walletCredentials(normalAddress: string) {
-  const email = `w${normalAddress.slice(2)}@wallet.arkive.app`;
-  const password = `wk_${normalAddress.slice(2)}`;
+  const hex = normalAddress.slice(2);
+  const email = `wk${hex}@arkive.app`;
+  const password = `wk_${hex}`;
   return { email, password };
 }
 

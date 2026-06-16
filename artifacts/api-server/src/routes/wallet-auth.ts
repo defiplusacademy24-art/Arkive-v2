@@ -18,8 +18,9 @@ function getAdminClient(): AdminClient {
 }
 
 function walletCredentials(normalAddress: string) {
-  const email = `w${normalAddress.slice(2)}@wallet.arkive.app`;
-  const password = `wk_${normalAddress.slice(2)}`;
+  const hex = normalAddress.slice(2);
+  const email = `wk${hex}@arkive.app`;
+  const password = `wk_${hex}`;
   return { email, password };
 }
 
@@ -82,7 +83,7 @@ router.post("/wallet/linked-signin", async (req, res) => {
       (u) =>
         (u.user_metadata?.wallet_address as string | undefined)?.toLowerCase() === normalAddress &&
         u.email &&
-        !u.email.endsWith("@wallet.arkive.app"),
+        !u.email.match(/^wk[0-9a-f]{40}@arkive\.app$/),
     );
 
     if (!linked || !linked.email) {
