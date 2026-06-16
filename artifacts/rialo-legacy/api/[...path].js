@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createClient } from "@supabase/supabase-js";
 
 function getAdminClient() {
@@ -10,7 +9,7 @@ function getAdminClient() {
   });
 }
 
-function walletCredentials(addr: string) {
+function walletCredentials(addr) {
   const normal = addr.toLowerCase();
   return {
     email: `w${normal.slice(2)}@wallet.arkive.app`,
@@ -18,15 +17,7 @@ function walletCredentials(addr: string) {
   };
 }
 
-export default async function handler(
-  req: { method: string; url: string; body: Record<string, string> },
-  res: {
-    setHeader: (k: string, v: string) => void;
-    status: (code: number) => { json: (d: unknown) => void; end: () => void };
-    json: (data: unknown) => void;
-    end: () => void;
-  },
-) {
+export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -80,7 +71,7 @@ export default async function handler(
       const users = data?.users ?? [];
       const linked = users.find(
         (u) =>
-          (u.user_metadata?.wallet_address as string | undefined)?.toLowerCase() === normal &&
+          u.user_metadata?.wallet_address?.toLowerCase() === normal &&
           u.email &&
           !u.email.endsWith("@wallet.arkive.app"),
       );
@@ -90,7 +81,7 @@ export default async function handler(
         email: linked.email,
       });
       if (linkError) throw linkError;
-      const tokenHash = (linkData as { properties?: { hashed_token?: string } })?.properties?.hashed_token;
+      const tokenHash = linkData?.properties?.hashed_token;
       if (!tokenHash) throw new Error("Failed to generate login link");
       res.json({ token_hash: tokenHash, type: "magiclink" });
     } catch (err) {
